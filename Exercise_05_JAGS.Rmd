@@ -319,6 +319,8 @@ Autocorrelation is always 1 by definition at lag 0 and then typically decays tow
 ```{r}
 effectiveSize(jags.burn)
 ```
+3(5000-500)=13500 
+recommends at least 5000 
 
 For the second question, the number of samples required increases with the tails of the posterior distribution. For example, if you only care about the posterior mean or median, then you can get a stable estimate with an effective sample size of only a few hundred points. The standard deviation and interquartile range are more extreme and thus require more samples to estimate, while the 95% CI requires even more---**a common rule of thumb would be an effective size of 5000 samples**. Recall that the CI is determined by the most extreme values, so at n=5000 it is only the 125 largest and 125 smallest values that determine the value. If you need to work with even larger CI or even lower probability events you'll require more samples. This phenomena can be shown graphically (and diagnosed) by looking at plots of how different statistics change as a function of sample size:
 
@@ -342,6 +344,7 @@ Once your model has converged, and has enough samples after burn-in, you can cal
 ```{r}
 summary(jags.burn)
 ```
+don't ever report naive se - report time-series se (has been corrected for autocorrelation)
 
 The first part of this table is the mean, standard deviation, and two different standard errors. Knowing how to interpret the last three of this is important. The first, SD, describes the spread of the posterior distributionin this case it is the **uncertainty about the parameter** `mu` (which, in other contexts, we usually refer to as the standard error). The SD doesn't decrease as you run the MCMC longer, it just converges on the value determined by the number and distribution of data points. By contrast, the SE declines asymptotically with MCMC length. In this context, this makes it an **indicator of the numerical precision of your results**---the longer the MCMC the higher the numerical precision of the posterior statistics. Between the two alternative SE values you should always use the Time-series SE, which has been corrected for autocorrelation, rather than the Naive SE, which has not.
 
@@ -360,6 +363,8 @@ For example, there are a number of stats/diagnostics that you'll want to perform
 pairs(out)	## pairs plot to evaluate parameter correlation
 cor(out)    ## correlation matrix among model parameters
 ```
+Bayes gives you joint distributions 
+slope and intercept are highly correlated 
 
 Be aware that for a univariate regression that it is completely normal for the slope and intercept to be correlated (this occurs in a frequentist regression too). This also emphasizes why it's important to remember that MCMC gives you the full JOINT distribution of all your parameters, not just their individual marginal distributions, and that you can make some pretty significant errors if you just apply the marginal summary statistics when making predictions.
 
@@ -369,6 +374,12 @@ It's also worth noting that once you have the raw MCMC samples that you can also
 SD <- 1/sqrt(out[,"S"])
 hist(SD)
 summary(SD)
+```
+residual standard error is S but inverse 
+
+```{R}
+head(out)
+sum(out[,2]>0)/nrow(out)
 ```
 
 ### Task 1 
@@ -381,6 +392,8 @@ summary(SD)
 # Multiple Regression
 
 Using the dataset "data/Ex05.Part2.RData", extend your univariate regression to a multiple regression model with two covariates (x1, x2) and an interaction term (x1\*x2). In doing so, not only do you need to update your process model, but you also need to make sure to update the dimension of your prior and initial conditions on $b$ from 2 to 4.
+
+answer: add to process model and add terms to prior matrices 
 
 ### Task 2
 
