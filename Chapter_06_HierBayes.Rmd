@@ -15,7 +15,7 @@ The objective of this activity is to explore basic hierarchical models. We will 
 For this activity we will look at data on mosquito abundance. The data file “Mosquito.csv” contains ten years worth of data for each of 5 replicate traps. We will begin with the simplest possible model to explain this data and incrementally add complexity.
 
 ```{r}
-data <- read.csv("data/Mosquito.csv",header=TRUE,as.is = TRUE)
+dat <- read.csv("data/Mosquito.csv",header=TRUE,as.is = TRUE)
 ```
 
 ### Task 1:
@@ -24,12 +24,12 @@ data <- read.csv("data/Mosquito.csv",header=TRUE,as.is = TRUE)
 
 ```{r}
 
-summary(data)
-data$rep <- as.factor(data$rep)
-unique(data$rep) # 5 reps 
-data$time <- as.factor(data$time)
-unique(data$time)  # 10 years 
-plot(data$density ~ data$time)
+summary(dat)
+dat$rep <- as.factor(dat$rep)
+unique(dat$rep) # 5 reps 
+dat$time <- as.factor(dat$time)
+unique(dat$time)  # 10 years 
+plot(dat$density ~ dat$time)
 
 # Create the plot with lines connecting same reps through time
 ggplot(dat, aes(x = time, y = density, color = rep)) +
@@ -103,7 +103,7 @@ Ex[i] <- mu + alpha.t[time[i]]      ## process model (varies with time but not r
   tau.t ~ dgamma(0.001,0.001) ## hyperprior
   
   for(t in 1:nt){ 
-      Ex[t] <- mu + alpha.t[t] 
+    Ex[t] <- mu + alpha.t[time[t]] 
       for (r in 1:nr){
         x[t,r] ~ dnorm(mu,sigma)
       }
@@ -165,6 +165,15 @@ for(t in 1:nt){
 4.  Fit the random-time model and turn in a plot like in Task 1 with the posterior CI and PI plotted against the data. Hint: once you convert the JAGS coda object to a matrix, you can use `grep` to figure out which columns contain alphas:
 
 ```         
+jags.mat <- as.matrix(jags.out)
+sel.a <- grep("alpha",colnames(jags.mat))
+plot(jags.out[,sel.a])
+summary(jags.out[,sel.a])
+alpha <- jags.mat[,sel.a]
+apply(alpha,2,mean)
+```
+
+```{r} 
 jags.mat <- as.matrix(jags.out)
 sel.a <- grep("alpha",colnames(jags.mat))
 plot(jags.out[,sel.a])
