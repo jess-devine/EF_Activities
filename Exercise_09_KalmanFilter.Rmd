@@ -1,13 +1,11 @@
-Kalman Filter
-========================================================
+# Kalman Filter
 
 ```{r, echo=FALSE}
 #devtools::install_github("EcoForecast/ecoforecastR")
 library(ecoforecastR)
 ```
 
-
-In this exercise we will apply the classic Kalman Filter (KF) algorithm to the Google Flu Trends data we previously used to explore the state-space model. Unlike the previous exercise that fit a single time-series, we'll utilize the matrix version of the Kalman filter to look at the flu across New England. 
+In this exercise we will apply the classic Kalman Filter (KF) algorithm to the Google Flu Trends data we previously used to explore the state-space model. Unlike the previous exercise that fit a single time-series, we'll utilize the matrix version of the Kalman filter to look at the flu across New England.
 
 In the multivariate version of the KF, the connection between state variables in the Analysis step is provided in two ways: (1) through interactions in the process model itself, $MPM^T$, and (2) through the covariance in the process error, $Q$. In this assignment we'll assimilate all 4 combinations of with/without interactions in the process model versus with/without correlation in the process error to evaluate how each impacts the inferences made. Since the KF will always be following the data, where we'll see the largest impact of these choices will be in the differences in the state uncertainties, especially in the periods of missing data.
 
@@ -193,8 +191,8 @@ With the Kalman Filter function defined, we need to define the inputs to the fun
 Y   = log10(y)
 
 ## options for process model 
-alpha = 0        ## assume no spatial flux
-#alpha = 0.05    ## assume a large spatial flux
+#alpha = 0        ## assume no spatial flux
+alpha = 0.05    ## assume a large spatial flux
 M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
 
 ## options for process error covariance
@@ -271,25 +269,387 @@ points(time,Y[1,])
 
 Run the KF under all four combinations of covariance in the process model versus process error and compare the results. In particular you'll want to pay attention to the missing data at the beginning of the timeseries for some states. You'll also want to comment on how spatial adjacency affects the confidence in the inferences (some states are more isolated than others) in the four different scenarios. Finally, you'll want to note that the alpha estimated from the data itself (0.000209), is close to zero and thus our real forecast would be much more like our no-flux run than our high flux run.
 
-Task 1, KF00 [A]: Run the default analysis, KF00, with no spatial flux in the process model, and no spatial covariance in the process error
+Task 1, KF00 [A]: Run the default analysis, KF00, with no spatial flux in the process model, and no spatial covariance in the process error.
 
-Task 2, KF01 [A]: Rerun with process error set to the full covariance matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference?
+```{r task1}
 
-Task 3, KF10 [B]: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix (no spatial covariance). Comparing KF10 to KF00, what impact does including a spatial flux in the process model have on the inference?
+## options for process model 
+alpha = 0        ## assume no spatial flux
+#alpha = 0.05    ## assume a large spatial flux
+M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
 
-Task 4, KF11 [A]: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually.
+## options for process error covariance
+#Q = tau_proc            ## full process error covariance matrix
+Q = diag(diag(tau_proc))        ## diagonal process error matrix
+
+## observation error covariance (assumed independent)  
+R = diag(tau_obs,nstates) 
+
+## prior on first step, initialize with long-term mean and covariance
+mu0 = apply(Y,1,mean,na.rm=TRUE) 
+P0 = cov(t(Y),use="pairwise.complete.obs")
+#w <- P0*0+0.25 + diag(0.75,dim(P0)) ## iptional: downweight covariances in IC
+#P0 = P0*w 
+
+## Run Kalman Filter
+KF00 = KalmanFilter(M,mu0,P0,Q,R,Y)
+
+######################
+
+attach(KF00)
+nt = length(time)
+
+### plot ANALYSIS mean & CI time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  ci = rbind(mu.a[i,]-1.96*sqrt(P.a[i,i,]),mu.a[i,]+1.96*sqrt(P.a[i,i,]))
+  plot(time,mu.a[i,],ylim=range(ci,na.rm=TRUE),type='n',main=states[i])
+  ecoforecastR::ciEnvelope(time,ci[1,],ci[2,],col="lightBlue")
+  lines(time,mu.a[i,],col=4)
+  lines(time,Y[i,])
+}
+
+## plot ANALYSIS and FORECAST variance time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  plot(time,sqrt(P.a[i,i,]),ylim=c(0,sqrt(max(c(P.a[i,i,],P.f[i,i,])))),main=states[i],xlab="Time",
+       ylab="Std Error",type='l')
+  lines(time,sqrt(P.f[i,i,1:nt]),col=2)
+  points(time[is.na(Y[i,])],rep(0,nt)[is.na(Y[i,])],pch="*",col=3) ## flag's the zero's
+  legend("topright",legend=c("Analysis","Forecast","NAs"),col=1:3,lty=c(1,1,NA),pch=c(NA,NA,1),cex=1.4)
+}
+
+
+```
+
+Task 2, KF01 [A]: Rerun with process error set to the full covariance matrix of Q, compare the results with the original -- what impact does including covariance in the process error have on the inference? DONE improved
+
+```{r task2}
+
+## options for process model 
+alpha = 0        ## assume no spatial flux
+#alpha = 0.05    ## assume a large spatial flux
+M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
+
+## options for process error covariance
+Q = tau_proc            ## full process error covariance matrix
+#Q = diag(diag(tau_proc))        ## diagonal process error matrix
+
+## observation error covariance (assumed independent)  
+R = diag(tau_obs,nstates) 
+
+## prior on first step, initialize with long-term mean and covariance
+mu0 = apply(Y,1,mean,na.rm=TRUE) 
+P0 = cov(t(Y),use="pairwise.complete.obs")
+#w <- P0*0+0.25 + diag(0.75,dim(P0)) ## iptional: downweight covariances in IC
+#P0 = P0*w 
+
+## Run Kalman Filter
+KF00 = KalmanFilter(M,mu0,P0,Q,R,Y)
+
+######################
+
+attach(KF00)
+nt = length(time)
+
+### plot ANALYSIS mean & CI time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  ci = rbind(mu.a[i,]-1.96*sqrt(P.a[i,i,]),mu.a[i,]+1.96*sqrt(P.a[i,i,]))
+  plot(time,mu.a[i,],ylim=range(ci,na.rm=TRUE),type='n',main=states[i])
+  ecoforecastR::ciEnvelope(time,ci[1,],ci[2,],col="lightBlue")
+  lines(time,mu.a[i,],col=4)
+  lines(time,Y[i,])
+}
+
+## plot ANALYSIS and FORECAST variance time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  plot(time,sqrt(P.a[i,i,]),ylim=c(0,sqrt(max(c(P.a[i,i,],P.f[i,i,])))),main=states[i],xlab="Time",
+       ylab="Std Error",type='l')
+  lines(time,sqrt(P.f[i,i,1:nt]),col=2)
+  points(time[is.na(Y[i,])],rep(0,nt)[is.na(Y[i,])],pch="*",col=3) ## flag's the zero's
+  legend("topright",legend=c("Analysis","Forecast","NAs"),col=1:3,lty=c(1,1,NA),pch=c(NA,NA,1),cex=1.4)
+}
+
+
+```
+
+Task 3, KF10 [B]: Rerun with alpha = 0.05 but switch back to the *diagonal* Q matrix (no spatial covariance). Comparing KF10 to KF00, what impact does including a spatial flux in the process model have on the inference? DONE improved more
+
+```{r task3}
+
+## options for process model 
+#alpha = 0        ## assume no spatial flux
+alpha = 0.05    ## assume a large spatial flux
+M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
+
+## options for process error covariance
+#Q = tau_proc            ## full process error covariance matrix
+Q = diag(diag(tau_proc))        ## diagonal process error matrix
+
+## observation error covariance (assumed independent)  
+R = diag(tau_obs,nstates) 
+
+## prior on first step, initialize with long-term mean and covariance
+mu0 = apply(Y,1,mean,na.rm=TRUE) 
+P0 = cov(t(Y),use="pairwise.complete.obs")
+#w <- P0*0+0.25 + diag(0.75,dim(P0)) ## iptional: downweight covariances in IC
+#P0 = P0*w 
+
+## Run Kalman Filter
+KF00 = KalmanFilter(M,mu0,P0,Q,R,Y)
+
+######################
+
+attach(KF00)
+nt = length(time)
+
+### plot ANALYSIS mean & CI time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  ci = rbind(mu.a[i,]-1.96*sqrt(P.a[i,i,]),mu.a[i,]+1.96*sqrt(P.a[i,i,]))
+  plot(time,mu.a[i,],ylim=range(ci,na.rm=TRUE),type='n',main=states[i])
+  ecoforecastR::ciEnvelope(time,ci[1,],ci[2,],col="lightBlue")
+  lines(time,mu.a[i,],col=4)
+  lines(time,Y[i,])
+}
+
+## plot ANALYSIS and FORECAST variance time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  plot(time,sqrt(P.a[i,i,]),ylim=c(0,sqrt(max(c(P.a[i,i,],P.f[i,i,])))),main=states[i],xlab="Time",
+       ylab="Std Error",type='l')
+  lines(time,sqrt(P.f[i,i,1:nt]),col=2)
+  points(time[is.na(Y[i,])],rep(0,nt)[is.na(Y[i,])],pch="*",col=3) ## flag's the zero's
+  legend("topright",legend=c("Analysis","Forecast","NAs"),col=1:3,lty=c(1,1,NA),pch=c(NA,NA,1),cex=1.4)
+}
+
+
+```
+
+Task 4, KF11 [A]: Rerun with alpha = 0.05 and the full process error covariance Q matrix. Compare KF11 to the previous runs -- what impact does including both a spatial process and a process error covariance have over their impacts individually. DONE the confidence interval is in fact higher
+
+```{r task3}
+
+## options for process model 
+#alpha = 0        ## assume no spatial flux
+alpha = 0.05    ## assume a large spatial flux
+M = adj*alpha + diag(1-alpha*apply(adj,1,sum))  ## random walk with flux
+
+## options for process error covariance
+Q = tau_proc            ## full process error covariance matrix
+#Q = diag(diag(tau_proc))        ## diagonal process error matrix
+
+## observation error covariance (assumed independent)  
+R = diag(tau_obs,nstates) 
+
+## prior on first step, initialize with long-term mean and covariance
+mu0 = apply(Y,1,mean,na.rm=TRUE) 
+P0 = cov(t(Y),use="pairwise.complete.obs")
+#w <- P0*0+0.25 + diag(0.75,dim(P0)) ## iptional: downweight covariances in IC
+#P0 = P0*w 
+
+## Run Kalman Filter
+KF00 = KalmanFilter(M,mu0,P0,Q,R,Y)
+
+######################
+
+attach(KF00)
+nt = length(time)
+
+### plot ANALYSIS mean & CI time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  ci = rbind(mu.a[i,]-1.96*sqrt(P.a[i,i,]),mu.a[i,]+1.96*sqrt(P.a[i,i,]))
+  plot(time,mu.a[i,],ylim=range(ci,na.rm=TRUE),type='n',main=states[i])
+  ecoforecastR::ciEnvelope(time,ci[1,],ci[2,],col="lightBlue")
+  lines(time,mu.a[i,],col=4)
+  lines(time,Y[i,])
+}
+
+## plot ANALYSIS and FORECAST variance time-series
+par(mfrow=c(3,1))
+for(i in 1:6){
+  plot(time,sqrt(P.a[i,i,]),ylim=c(0,sqrt(max(c(P.a[i,i,],P.f[i,i,])))),main=states[i],xlab="Time",
+       ylab="Std Error",type='l')
+  lines(time,sqrt(P.f[i,i,1:nt]),col=2)
+  points(time[is.na(Y[i,])],rep(0,nt)[is.na(Y[i,])],pch="*",col=3) ## flag's the zero's
+  legend("topright",legend=c("Analysis","Forecast","NAs"),col=1:3,lty=c(1,1,NA),pch=c(NA,NA,1),cex=1.4)
+}
+
+
+```
 
 Task 5 [A]: In a true forecasting situation you don't have all the data in hand at once. You also often want to make a forecast that is farther than one time-step into the future. **Write an R function you could run daily** that would:
 
-* Take the previous forecast and the new data (for just that day) as inputs (plus any other parameters you may need)
-* Assimilates the new data
-* Makes a forecast 16 time steps into the future
-* Returns a list that starts from (& includes) the current best estimate (i.e. nowcast) and the forecast for the next 16 time steps. This list should include both means (mu) and covariances (P), but shouldn't need to include separate mu.a/mu.f and P.a/P.f objects.
+-   Take the previous forecast and the new data (for just that day) as inputs (plus any other parameters you may need)
+-   Assimilates the new data
+-   Makes a forecast 16 time steps into the future
+-   Returns a list that starts from (& includes) the current best estimate (i.e. nowcast) and the forecast for the next 16 time steps. This list should include both means (mu) and covariances (P), but shouldn't need to include separate mu.a/mu.f and P.a/P.f objects.
 
 You should leverage the existing `KalmanAnalysis` and `KalmanForecast` functions in your new function, and you shouldn't need to change anything in or about those functions.
 
 Note: in a real world situation, where your forecast model has driver/covariate data, you would actually want to first re-run the forecast from yesterday to today with the actual (now observed) driver/covariate data, rather than using your archived forecast (which was done based on your forecasted covariate/driver data), before assimilating today's new observations of your response data.
 
-Task 6 [C: Extra Credit]:
-Using the run with alpha=0.05 and full process error covariance Q, apply your forecast function to make, and visualize, 5 iterative forecasts. Hint: when visualizing, remember that each forecast starts from a different day.
+```{r}
 
+# Simplified Daily Kalman Filter Forecast Function
+
+DailyKalmanForecast <- function(mu_prev, P_prev, new_observation, M, Q, R, forecast_horizon = 16) {
+  ## Simple daily forecast function that:
+  ## 1. Takes previous state estimate and new observation
+  ## 2. Assimilates new data 
+  ## 3. Makes forecast for next 16 steps
+  ##
+  ## Inputs:
+  ##   mu_prev: previous state mean estimate (from yesterday's analysis or initial condition)
+  ##   P_prev: previous state covariance estimate  
+  ##   new_observation: today's new observation vector (can contain NAs)
+  ##   M, Q, R: Kalman filter model matrices
+  ##   forecast_horizon: number of steps to forecast (default 16)
+  ##
+  ## Returns:
+  ##   list with mu and P arrays for nowcast + 16 forecasts
+  
+  nstates <- length(new_observation)
+  
+  ## Step 1: Forecast from previous state to current time
+  forecast_to_now <- KalmanForecast(mu_prev, P_prev, M, Q)
+  
+  ## Step 2: Assimilate today's observation  
+  analysis_now <- KalmanAnalysis(forecast_to_now$mu, forecast_to_now$P, new_observation, R)
+  
+  ## Step 3: Initialize output arrays (nowcast + forecast_horizon steps)
+  n_steps <- forecast_horizon + 1
+  mu_out <- array(NA, dim = c(nstates, n_steps))
+  P_out <- array(NA, dim = c(nstates, nstates, n_steps))
+  
+  ## Store nowcast (analysis) as first time step
+  mu_out[, 1] <- analysis_now$mu
+  P_out[, , 1] <- analysis_now$P
+  
+  ## Step 4: Generate forecasts for next 16 steps
+  mu_temp <- analysis_now$mu
+  P_temp <- analysis_now$P
+  
+  for(i in 2:n_steps) {
+    forecast_step <- KalmanForecast(mu_temp, P_temp, M, Q)
+    mu_out[, i] <- forecast_step$mu
+    P_out[, , i] <- forecast_step$P
+    
+    ## Update for next iteration
+    mu_temp <- forecast_step$mu  
+    P_temp <- forecast_step$P
+  }
+  
+  return(list(mu = mu_out, P = P_out))
+}
+
+## Function to run iterative forecasts for visualization
+RunIterativeForecasts <- function(KF_results, start_days, M, Q, R, forecast_horizon = 16) {
+  ## Run multiple forecasts starting from different days
+  ##
+  ## Inputs:
+  ##   KF_results: results from initial KalmanFilter run (contains mu.a, P.a, etc.)
+  ##   start_days: vector of day indices to start forecasts from
+  ##   M, Q, R: model matrices
+  ##   forecast_horizon: number of days to forecast ahead
+  ##
+  ## Returns:
+  ##   list of forecast results for each start day
+  
+  forecasts <- list()
+  
+  for(i in 1:length(start_days)) {
+    day <- start_days[i]
+    
+    ## Use analysis state from the specified day as starting point
+    mu_start <- KF_results$mu.a[, day]
+    P_start <- KF_results$P.a[, , day]
+    
+    ## Create fake "new observation" (could be NA or actual if available)
+    ## For this exercise, we'll use the next day's data if available
+    if(day < ncol(KF_results$Y)) {
+      new_obs <- KF_results$Y[, day + 1]
+    } else {
+      new_obs <- rep(NA, nrow(KF_results$Y))  ## No new data available
+    }
+    
+    ## Run forecast
+    forecasts[[i]] <- DailyKalmanForecast(mu_start, P_start, new_obs, M, Q, R, forecast_horizon)
+    forecasts[[i]]$start_day <- day
+  }
+  
+  return(forecasts)
+}
+
+## Visualization function for iterative forecasts
+PlotIterativeForecasts <- function(forecasts, KF_results, states, time_vec) {
+  ## Plot multiple forecasts starting from different days
+  
+  nstates <- length(states)
+  n_forecasts <- length(forecasts)
+  
+  ## Create color palette for different forecasts
+  colors <- rainbow(n_forecasts)
+  
+  par(mfrow = c(min(3, nstates), 1))
+  
+  for(state_i in 1:min(6, nstates)) {
+    ## Set up plot with historical data
+    plot(time_vec, KF_results$mu.a[state_i, ], 
+         type = 'l', col = 'black', lwd = 2,
+         main = paste("Iterative Forecasts:", states[state_i]),
+         xlab = "Time", ylab = "Value",
+         xlim = range(time_vec, na.rm = TRUE))
+    
+    ## Add historical observations
+    points(time_vec, KF_results$Y[state_i, ], pch = 16, col = 'gray')
+    
+    ## Add each forecast
+    for(i in 1:n_forecasts) {
+      start_day <- forecasts[[i]]$start_day
+      forecast_times <- time_vec[start_day] + 0:(ncol(forecasts[[i]]$mu) - 1)
+      
+      ## Plot forecast mean
+      lines(forecast_times, forecasts[[i]]$mu[state_i, ], 
+            col = colors[i], lwd = 2, lty = 2)
+      
+      ## Add confidence intervals for forecast
+      forecast_sd <- sqrt(forecasts[[i]]$P[state_i, state_i, ])
+      ci_upper <- forecasts[[i]]$mu[state_i, ] + 1.96 * forecast_sd
+      ci_lower <- forecasts[[i]]$mu[state_i, ] - 1.96 * forecast_sd
+      
+      ## Add shaded CI (make it semi-transparent)
+      polygon(c(forecast_times, rev(forecast_times)), 
+              c(ci_upper, rev(ci_lower)),
+              col = adjustcolor(colors[i], alpha = 0.2), border = NA)
+    }
+    
+    ## Add legend
+    legend_labels <- paste("Forecast from day", sapply(forecasts, function(x) x$start_day))
+    legend("topright", 
+           legend = c("Historical", "Observations", legend_labels),
+           col = c("black", "gray", colors), 
+           lwd = c(2, NA, rep(2, n_forecasts)),
+           pch = c(NA, 16, rep(NA, n_forecasts)),
+           lty = c(1, NA, rep(2, n_forecasts)),
+           cex = 0.8)
+  }
+}
+```
+
+Task 6 [C: Extra Credit]: Using the run with alpha=0.05 and full process error covariance Q, apply your forecast function to make, and visualize, 5 iterative forecasts. Hint: when visualizing, remember that each forecast starts from a different day.
+
+```{r}
+# Assuming you have KF00 results from your existing run with alpha=0.05
+# Pick 5 different starting days
+start_days <- c(10, 20, 30, 40, 50)  # or whatever days you choose
+
+# Run iterative forecasts
+forecasts <- RunIterativeForecasts(KF00, start_days, M, Q, R)
+
+# Visualize - this will show how each forecast evolves from its starting day
+PlotIterativeForecasts(forecasts, KF00, states, time)
+```

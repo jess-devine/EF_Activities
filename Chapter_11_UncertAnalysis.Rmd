@@ -11,7 +11,7 @@ The propagation of uncertainty into predictions is one of the key things that se
 
 We will explore the impact of different uncertainties on our forecast within the framework in Dietze 2017 (Ecol Appl.), which is also discussed in Chapter 2.5.3. Specifically, we consider a dynamic model that predicts the future state of the system, $Y_{t+1}$, given the current state, $Y_t$, a set of covariates/drivers, $X_t$, model parameters, $\theta$, random effects, $\alpha$, and process error, $\epsilon$
 
-$$Y_{t+1} = f(Y_t,X_t | \theta + \alpha) + \epsilon$$   {#eq:eqn1}
+$$Y_{t+1} = f(Y_t,X_t | \theta + \alpha) + \epsilon$$ {#eq:eqn1}
 
 Given this general model we can partition the forecast uncertainty into the following terms:
 
@@ -19,14 +19,13 @@ $$Var[Y_{t+1}] \approx \underbrace{\left (\frac{\partial f}{\partial Y}\right )^
  + \underbrace{\left (\frac{\partial f}{\partial X}\right )^2 Var[X_t]}_{Drivers}
  + \underbrace{\left (\frac{\partial f}{\partial \theta}\right )^2  Var[\theta]  }_{Parmeters}
  + \underbrace{\left (\frac{\partial f}{\partial \theta}\right )^2   Var[\alpha] }_{Random \; Effects}
- + \underbrace{Var[\epsilon]}_{error}$$   {#eq:eqn2}
+ + \underbrace{Var[\epsilon]}_{error}$$ {#eq:eqn2}
 
 Qualitatively, this framework allows us to make a number of predictions about the specific terms and their contribution to ecological forecast uncertainty
 
 ![Table 1](images/Dietze2017EcolApplTable1.jpeg)
 
-
-However, as well see below, one strength of this framework is that it can also be applied quantitatively to understand how different uncertainties affect real predictions. 
+However, as well see below, one strength of this framework is that it can also be applied quantitatively to understand how different uncertainties affect real predictions.
 
 ## Logistic Growth
 
@@ -96,7 +95,7 @@ model{
 "
 ```
 
-The variable names Q (process error) and R (observation error) may seem odd but this is done for consistency with material we will cover in Chapter 13 and the data assimilation literature. 
+The variable names Q (process error) and R (observation error) may seem odd but this is done for consistency with material we will cover in Chapter 13 and the data assimilation literature.
 
 ### Posterior Diagnostics
 
@@ -145,6 +144,7 @@ plot.run <- function(){
   points(time1,No[s,])
 }
 ```
+
 ```{r,echo=FALSE}
 ci <- apply(as.matrix(out$predict),2,quantile,c(0.025,0.5,0.975))
 plot.run()
@@ -203,9 +203,10 @@ lines(time2,N.det,col="purple",lwd=3)
 
 # Monte Carlo Error Propagation
 
-For each source of uncertainty we'll be exploring the Monte Carlo approach to error propagation. Let's start with the initial condition uncertainty. For this set of runs we'll want to continue to hold all the parameters and drivers at their means, and keep the process error off, but we'll vary the initial conditions. Specifically, we'll run the model `r Nmc` times, and each time we run the model we'll start from a different initial condition. For this analysis the distribution of initial conditions that we want to sample from is just the posterior distribution of the population size at our focal site in the last year of the calibration period, `N[6,30]`. Because we know that posterior distributions often have covariances among parameters, we're going to sample the _row numbers_ in the MCMC output rather than sample the posterior state directly. We'll save these row numbers and use the same rows when we later sample the model parameters, process error, and random effects as well. While we had the benefit of the posterior state estimate here, in other contexts the initial condition uncertainty might be derived directly from field sampled data, or (for unmeasured sites) may require another statistical model to make a _spatial_ prediction of the state of the system to new locations. If we're particularly data limited we may have to rely on Bayesian priors to inform the initial conditions (e.g. through expert elicitation).
+For each source of uncertainty we'll be exploring the Monte Carlo approach to error propagation. Let's start with the initial condition uncertainty. For this set of runs we'll want to continue to hold all the parameters and drivers at their means, and keep the process error off, but we'll vary the initial conditions. Specifically, we'll run the model `r Nmc` times, and each time we run the model we'll start from a different initial condition. For this analysis the distribution of initial conditions that we want to sample from is just the posterior distribution of the population size at our focal site in the last year of the calibration period, `N[6,30]`. Because we know that posterior distributions often have covariances among parameters, we're going to sample the *row numbers* in the MCMC output rather than sample the posterior state directly. We'll save these row numbers and use the same rows when we later sample the model parameters, process error, and random effects as well. While we had the benefit of the posterior state estimate here, in other contexts the initial condition uncertainty might be derived directly from field sampled data, or (for unmeasured sites) may require another statistical model to make a *spatial* prediction of the state of the system to new locations. If we're particularly data limited we may have to rely on Bayesian priors to inform the initial conditions (e.g. through expert elicitation).
 
 ### Initial Condition uncertainty
+
 ```{r}
 ## sample parameter rows from previous analysis
 prow = sample.int(nrow(params),Nmc,replace=TRUE)
@@ -230,7 +231,7 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 ### Parameter uncertainty
 
-Next, let's add parameter uncertainty to our forecast. To do this we'll want to sample the **joint** parameter posterior distribution using the row numbers as before. In this forecast we're still running `r Nmc` model runs, but now each run get's its own unique parameters _and_ its own unique initial conditions. We expect the total uncertainty to increase, so we can layer the run with both uncertainties on top of the run with just initial conditions to get a feel for how much more uncertainty is added when we incorporate parameter uncertainty.
+Next, let's add parameter uncertainty to our forecast. To do this we'll want to sample the **joint** parameter posterior distribution using the row numbers as before. In this forecast we're still running `r Nmc` model runs, but now each run get's its own unique parameters *and* its own unique initial conditions. We expect the total uncertainty to increase, so we can layer the run with both uncertainties on top of the run with just initial conditions to get a feel for how much more uncertainty is added when we incorporate parameter uncertainty.
 
 One thing that is important to note about the parameter uncertainty propagation is that it relies on having meaningful estimates of parameter uncertainty. That's not to say that forecasts can't be done with priors (e.g. through literature synthesis or expert elicitation), but forecasting what you expect to happen in a real system is definitely different than slapping an arbitrary uniform prior on default parameters (e.g. +/- 20%).
 
@@ -252,9 +253,7 @@ ecoforecastR::ciEnvelope(time2,N.I.ci[1,],N.I.ci[3,],col=col.alpha(N.cols[1],tra
 lines(time2,N.I.ci[2,],lwd=0.5)
 ```
 
-**Question 2: [A]** 
-A) Describe the pattern and relative magnitude of the parameter uncertainty and compare this to your expectations. 
-B) Using the existing model and Monte Carlo approach, describe how you might partition the contribution of each parameter (r, Kg, alpha, beta) to the forecast uncertainty.
+**Question 2: [A]** A) Describe the pattern and relative magnitude of the parameter uncertainty and compare this to your expectations. B) Using the existing model and Monte Carlo approach, describe how you might partition the contribution of each parameter (r, Kg, alpha, beta) to the forecast uncertainty.
 
 ### Driver uncertainty
 
@@ -267,7 +266,7 @@ for(i in 1:NE){
 }
 ```
 
-This example of having a smaller number of driver ensembles is not uncommon, and we can handle this easily by resampling _with replacement_ the ensemble members (again, represented as row numbers) the same number of times as our overall ensembles. Thus, while every run may have a unique initial condition and parameter combination, many runs share the same drivers.
+This example of having a smaller number of driver ensembles is not uncommon, and we can handle this easily by resampling *with replacement* the ensemble members (again, represented as row numbers) the same number of times as our overall ensembles. Thus, while every run may have a unique initial condition and parameter combination, many runs share the same drivers.
 
 When driving ecological forecasts with other forecast outputs (weather, land use, economics, etc), it is important to remember that we can only resample **predictions** or we can sample ensemble members **within a projection**, but we CANNOT resample **across projections**. For example, if I have a given climate scenario (e.g. RCP4.5), I can resample over what different climate models predict, but I cannot resample or average across the different scenarios (e.g. RCP4.5 and 8.5), because those scenarios themselves do not represent random draws from the distribution of possible futures.
 
@@ -297,7 +296,7 @@ lines(time2,N.I.ci[2,],lwd=0.5)
 
 ### Process uncertainty
 
-Adding process error to the model looks similar to both older _stochastic_ modeling approachs and to the _residual_ error in statistical models. However, it is subtly distinct in a few important ways. First, unlike theoretical stochastic models, process error is estimated explicitly by fitting models to data. Second, unlike residual error, when we estimate process error we partition it from the observation error. Thus the process error represents things in the process that the model is unable to capture (which will always occur because all models are approximations). The distinction between process and observation error is important because observation error only affects the current observation, but process error propagates into the future.
+Adding process error to the model looks similar to both older *stochastic* modeling approachs and to the *residual* error in statistical models. However, it is subtly distinct in a few important ways. First, unlike theoretical stochastic models, process error is estimated explicitly by fitting models to data. Second, unlike residual error, when we estimate process error we partition it from the observation error. Thus the process error represents things in the process that the model is unable to capture (which will always occur because all models are approximations). The distinction between process and observation error is important because observation error only affects the current observation, but process error propagates into the future.
 
 ```{r}
 ## process error samples
@@ -388,43 +387,39 @@ ciEnvelope(time2,V.pred.rel.in[3,],V.pred.rel.in[4,],col=N.cols[4])
 legend("topleft",legend=c("Process","Driver","Parameter","InitCond"),col=rev(N.cols[-5]),lty=1,lwd=5)
 ```
 
-
-**Question 6: [A]**  Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about improving in-sample predictions? What is the current balance between process and parameter error and what does that tell us about the potential value of increasing model complexity?
+**Question 6: [A]** Based on results, where would you focus your research efforts next if your aim was to improve out-of-sample predictions? What about improving in-sample predictions? What is the current balance between process and parameter error and what does that tell us about the potential value of increasing model complexity?
 
 ## Next steps [C: extra credit for 1 of the 3 options below]:
 
 The Monte Carlo approach to uncertainty propagation is very flexible and general, however for computationally demanding models it can also be limiting because of the large ensemble sizes required to approximate the full predictive distribution. As discussed in Chapter 11, there are alternative approaches that can be applied in these cases, but at the cost of additional assumptions and/or analytical complexity. We'd encourage you to explore how these other methods could be implemented for the above analysis:
 
-**1) Ensemble uncertainty propagation:** 
-The ensemble approach is very similar to the Monte Carlo approach but replaces the Monte Carlo approximation of the full predictive distribution with the approximation that the ensemble corresponds to a known probability distribution (e.g. Gaussian). Because it usually takes a much smaller sample size to get a stable estimate of a distribution's parameters (e.g. Gaussian mean and standard deviation), the size of the ensemble can be smaller provided the distributional assumption gives a good approximation. To implement the above analysis as an ensemble:
+**1) Ensemble uncertainty propagation:** The ensemble approach is very similar to the Monte Carlo approach but replaces the Monte Carlo approximation of the full predictive distribution with the approximation that the ensemble corresponds to a known probability distribution (e.g. Gaussian). Because it usually takes a much smaller sample size to get a stable estimate of a distribution's parameters (e.g. Gaussian mean and standard deviation), the size of the ensemble can be smaller provided the distributional assumption gives a good approximation. To implement the above analysis as an ensemble:
 
-* Change the lines that calculate predictive intervals using quantiles (e.g. `apply(N.*,2,quantile,c(0.025,0.5,0.975)))`) to instead calculate the mean and standard deviation
-* Then calculate the predictive interval using these statistics.
-* Compare the Gaussian approximation to the full Monte Carlo ensemble
-* Reduce the sample size, `Nmc`, by 10-50x and assess how the Gaussian approximation compares to the original and updated Monte Carlo estimates.
+-   Change the lines that calculate predictive intervals using quantiles (e.g. `apply(N.*,2,quantile,c(0.025,0.5,0.975)))`) to instead calculate the mean and standard deviation
+-   Then calculate the predictive interval using these statistics.
+-   Compare the Gaussian approximation to the full Monte Carlo ensemble
+-   Reduce the sample size, `Nmc`, by 10-50x and assess how the Gaussian approximation compares to the original and updated Monte Carlo estimates.
 
-**2) Analytical uncertainty propagation:**
-For even more computationally demanding problems, or problems where an analytical solution is desirable, it is also possibly to approximate the uncertainty propagation analytically:
+**2) Analytical uncertainty propagation:** For even more computationally demanding problems, or problems where an analytical solution is desirable, it is also possibly to approximate the uncertainty propagation analytically:
 
-* As a first-order approximation, assume that the single deterministic model run approximates the mean. It is important to realize that this violates Jensen's Inequality (mean of the function does not equal the function of the mean) but improving this approximation requires solving for the second deriatives (book eqn 11.2)
-* Approximate the forecast variance through time by applying Eqn 2 above to the logistic growth model. This will require taking the partial derivatives of the model with respect to each of the terms in the equation
-    + state = Y = N
-    + drivers = X = precip
-    + parameters = $\theta$ = $[r, Kg, \beta]$
-    + random effects = $\alpha$
-* Next you need to analytically calculate the variance of the initial conditions, drivers, parameters, random effects, and process error = $Var[\epsilon]$ = Q
-* Finally, because the forecast variance has to be solved iteratively (same as the mean), you need to create an alternative version of the `forecastN` function that calculates both N and VarN for each time step
-* Partitioning variances just requires keep track of each of the terms ($derivative^2 Var$)
-* Once you get the basic version working, you'll want to improve the approximation by including the covariance terms among parameters (book eqn 11.5)
+-   As a first-order approximation, assume that the single deterministic model run approximates the mean. It is important to realize that this violates Jensen's Inequality (mean of the function does not equal the function of the mean) but improving this approximation requires solving for the second deriatives (book eqn 11.2)
+-   Approximate the forecast variance through time by applying Eqn 2 above to the logistic growth model. This will require taking the partial derivatives of the model with respect to each of the terms in the equation
+    -   state = Y = N
+    -   drivers = X = precip
+    -   parameters = $\theta$ = $[r, Kg, \beta]$
+    -   random effects = $\alpha$
+-   Next you need to analytically calculate the variance of the initial conditions, drivers, parameters, random effects, and process error = $Var[\epsilon]$ = Q
+-   Finally, because the forecast variance has to be solved iteratively (same as the mean), you need to create an alternative version of the `forecastN` function that calculates both N and VarN for each time step
+-   Partitioning variances just requires keep track of each of the terms ($derivative^2 Var$)
+-   Once you get the basic version working, you'll want to improve the approximation by including the covariance terms among parameters (book eqn 11.5)
 
-**3) Interactions between uncertainties:**
-The approach used above is based on sequentially adding different sources of uncertainty to the full model. This raises two questions: (1) How sensitive are the results to the order the variables are introduced and (2) to what extent do variables interact with each other.  Use the analytical rules for combining variances (Chapter 11 appendices) to address these questions, and estimate the interaction terms between the uncertainties, for the "in sample" site-level run. Do this either numerically (Monte Carlo or Ensemble approach) or Analytically. If approaching numerically, I'd give the hint that Var(A+B) = Var(A) + Var(B) + Cov(A,B). For example, if A = IC and B = parameters, then Var(A) comes from runs with just IC, Var(B) comes from runs with just parameter error, Var(A+B) comes from runs with both, and the covariance Cov(A,B), which provides a measure of the interaction between A and B, is found by difference. Also recall from chapter 2 (Box 2.1) that covariances can be decomposed into correlations, which are often easier to interpret.
+**3) Interactions between uncertainties:** The approach used above is based on sequentially adding different sources of uncertainty to the full model. This raises two questions: (1) How sensitive are the results to the order the variables are introduced and (2) to what extent do variables interact with each other. Use the analytical rules for combining variances (Chapter 11 appendices) to address these questions, and estimate the interaction terms between the uncertainties, for the "in sample" site-level run. Do this either numerically (Monte Carlo or Ensemble approach) or Analytically. If approaching numerically, I'd give the hint that Var(A+B) = Var(A) + Var(B) + Cov(A,B). For example, if A = IC and B = parameters, then Var(A) comes from runs with just IC, Var(B) comes from runs with just parameter error, Var(A+B) comes from runs with both, and the covariance Cov(A,B), which provides a measure of the interaction between A and B, is found by difference. Also recall from chapter 2 (Box 2.1) that covariances can be decomposed into correlations, which are often easier to interpret.
 
 ## Applying this to your own forecast
 
 To apply this to your own model and data you'll need to:
 
-1. Implementing a function like `forecastN` that lets you forward simulate your model.
-2. Load up the output from your state space model calibration (Exercise 06) so that you have access to your parameter and initial condition uncertainties (the latter being the last latent state in your model fit).
-3. Load up any other driver/covariate data (or scenarios) that you need to be able to run your model into the future. Hopefully these inputs already have uncertainties reported, or ensemble members you can sample from, similar to the ppt_ensemble above. For meteorology, ensemble products are available on both the weather (e.g. NOAA GEFS) and climate (e.g. CMIP) time scales, but you can always get the ball rolling with an analysis that just resamples historical data (e.g. your calibration data).
-4. Run through the analyses above, passing in the inputs, parameters, and initial conditions that are relevant to your own model!
+1.  Implementing a function like `forecastN` that lets you forward simulate your model.
+2.  Load up the output from your state space model calibration (Exercise 06) so that you have access to your parameter and initial condition uncertainties (the latter being the last latent state in your model fit).
+3.  Load up any other driver/covariate data (or scenarios) that you need to be able to run your model into the future. Hopefully these inputs already have uncertainties reported, or ensemble members you can sample from, similar to the ppt_ensemble above. For meteorology, ensemble products are available on both the weather (e.g. NOAA GEFS) and climate (e.g. CMIP) time scales, but you can always get the ball rolling with an analysis that just resamples historical data (e.g. your calibration data).
+4.  Run through the analyses above, passing in the inputs, parameters, and initial conditions that are relevant to your own model!
